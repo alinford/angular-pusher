@@ -65,6 +65,9 @@ angular.module('doowb.angular-pusher', [])
       var pusher;
 
       function onSuccess () {
+	      $window.Pusher.log = function (message) {
+		      window.console.log(message);
+	      };
         pusher = new $window.Pusher(apiKey, initOptions);
       }
 
@@ -81,9 +84,30 @@ angular.module('doowb.angular-pusher', [])
 
 })
 
-.factory('Pusher', ['$rootScope', 'PusherService',
-  function ($rootScope, PusherService) {
+.factory('Pusher', ['$rootScope', 'PusherService', '$q',
+  function ($rootScope, PusherService, $q) {
+	var connectionDeferred = $q.defer();
+	var socket = '';
+	PusherService.then(function (pusher) {
+		if (pusher.connection) {
+			pusher.connection.bind('state_change', function(states) {
+				switch (states.current) {
+					case 'connected':
+						socket = pusher.connection.socket_id;
+						console.log('pusher:connection:connected: ', socket);
+						connectionDeferred.resolve(socket);
+						break;
+					case 'disconnected':
+					case 'failed':
+					case 'unavailable':
+						break;
+				}
+			});
+		}
+	});
+
     return {
+	  socketId: function () { return connectionDeferred.promise; },
 
       subscribe: function (channelName, eventName, callback) {
         PusherService.then(function (pusher) {
@@ -100,6 +124,7 @@ angular.module('doowb.angular-pusher', [])
         PusherService.then(function (pusher) {
           pusher.unsubscribe(channelName);
         });
+
       }
     };
   }
