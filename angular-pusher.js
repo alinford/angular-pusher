@@ -109,28 +109,18 @@ angular.module('doowb.angular-pusher', [])
 	    socketId: function () { return connectionDeferred.promise; },
 
       subscribe: function (channelName, eventName, callback) {
+	      var channelDeferred = $q.defer();
         PusherService.then(function (pusher) {
           var channel = pusher.channel(channelName) || pusher.subscribe(channelName);
-          channel.bind(eventName, function (data) {
+          channelDeferred.resolve(channel);
+	        channel.bind(eventName, function (data) {
             if (callback) callback(data);
             $rootScope.$broadcast(channelName + ':' + eventName, data);
             $rootScope.$digest();
           });
         });
+	      return channelDeferred.promise;
       },
-
-	    trigger: function (channelName, eventName, data) {
-		    PusherService.then(function (pusher) {
-			    var sendDeferred = $q.defer();
-			    var channel = pusher.channel(channelName);
-			    var triggered = channel.trigger(eventName, data);
-			    if (triggered) {
-				    sendDeferred.resolve();
-			    } else {
-				    sendDeferred.reject();
-			    }
-		    });
-	    },
 
       unsubscribe: function (channelName) {
         PusherService.then(function (pusher) {
