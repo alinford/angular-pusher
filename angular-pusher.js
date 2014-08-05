@@ -94,7 +94,6 @@ angular.module('doowb.angular-pusher', [])
 				switch (states.current) {
 					case 'connected':
 						socket = pusher.connection.socket_id;
-						console.log('pusher:connection:connected: ', socket);
 						connectionDeferred.resolve(socket);
 						break;
 					case 'disconnected':
@@ -107,7 +106,7 @@ angular.module('doowb.angular-pusher', [])
 	});
 
     return {
-	  socketId: function () { return connectionDeferred.promise; },
+	    socketId: function () { return connectionDeferred.promise; },
 
       subscribe: function (channelName, eventName, callback) {
         PusherService.then(function (pusher) {
@@ -119,6 +118,19 @@ angular.module('doowb.angular-pusher', [])
           });
         });
       },
+
+	    trigger: function (channelName, eventName, data) {
+		    PusherService.then(function (pusher) {
+			    var sendDeferred = $q.defer();
+			    var channel = pusher.channel(channelName);
+			    var triggered = channel.trigger(eventName, data);
+			    if (triggered) {
+				    sendDeferred.resolve();
+			    } else {
+				    sendDeferred.reject();
+			    }
+		    });
+	    },
 
       unsubscribe: function (channelName) {
         PusherService.then(function (pusher) {
