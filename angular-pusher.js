@@ -18,6 +18,7 @@
 
 angular.module('doowb.angular-pusher', [])
 
+
 // create a provider that loads the pusher script from a cdn
 .provider('PusherService', function () {
   var scriptUrl = '//js.pusher.com/2.2/pusher.min.js';
@@ -65,17 +66,19 @@ angular.module('doowb.angular-pusher', [])
       var pusher;
 
       function onSuccess () {
-	      $window.Pusher.log = function (message) {
-		      window.console.log(message);
-	      };
+        $window.Pusher.log = function (message) {
+          window.console.log(message);
+        };
         pusher = new $window.Pusher(apiKey, initOptions);
+
+        pusher.connection.bind('connected', function() {
+          deferred.resolve(pusher);
+        });
+
       }
 
       var onScriptLoad = function (callback) {
         onSuccess();
-        $timeout(function () {
-          deferred.resolve(pusher);
-        });
       };
 
       createScript($document[0], onScriptLoad);
@@ -86,40 +89,29 @@ angular.module('doowb.angular-pusher', [])
 
 .factory('Pusher', ['$rootScope', 'PusherService', '$q',
   function ($rootScope, PusherService, $q) {
-	var connectionDeferred = $q.defer();
-	var socket = '';
-	PusherService.then(function (pusher) {
-		if (pusher.connection) {
-			pusher.connection.bind('state_change', function(states) {
-				switch (states.current) {
-					case 'connected':
-						socket = pusher.connection.socket_id;
-						connectionDeferred.resolve(socket);
-						break;
-					case 'disconnected':
-					case 'failed':
-					case 'unavailable':
-						break;
-				}
-			});
-		}
-	});
+  var connectionDeferred = $q.defer();
+  var socket = '';
+  
+  PusherService.then(function (pusher) {
+    var socket = pusher.connection.socket_id;
+    connectionDeferred.resolve(socket);
+  });
 
     return {
-	    socketId: function () { return connectionDeferred.promise; },
+      socketId: function () { return connectionDeferred.promise; },
 
       subscribe: function (channelName, eventName, callback) {
-	      var channelDeferred = $q.defer();
+        var channelDeferred = $q.defer();
         PusherService.then(function (pusher) {
           var channel = pusher.channel(channelName) || pusher.subscribe(channelName);
           channelDeferred.resolve(channel);
-	        channel.bind(eventName, function (data) {
+          channel.bind(eventName, function (data) {
             if (callback) callback(data);
             $rootScope.$broadcast(channelName + ':' + eventName, data);
             $rootScope.$digest();
           });
         });
-	      return channelDeferred.promise;
+        return channelDeferred.promise;
       },
 
       unsubscribe: function (channelName) {
