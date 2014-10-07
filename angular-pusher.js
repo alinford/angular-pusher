@@ -118,7 +118,12 @@ angular.module('doowb.angular-pusher', [])
         PusherService.then(function (pusher) {
           pusher.unsubscribe(channelName);
         });
+      },
 
+      disconnect: function() {
+        PusherService.then(function (pusher) {
+          pusher.disconnect();
+        });
       }
     };
   }
